@@ -1,25 +1,57 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory
 import os
 import requests
 import json
 from datetime import datetime
 import time
 from urllib.request import urlretrieve
+import cv2
+import numpy as np
+from io import BytesIO
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'received_images'
 ENHANCED_FOLDER = 'enhanced_images'
-API_KEY = "14a2da80-1541-11f0-80e8-69e4165f51fa"
+API_KEY = "14a2da80-1541-11f0-80e8-69e4165f51fa"  # Replace with your actual API key
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(ENHANCED_FOLDER, exist_ok=True)
 
+# ----------------------------
+# 📸 CROP FACE ENDPOINT
+# ----------------------------
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+
+@app.route('/crop_face', methods=['POST'])
+def crop_face():
+    if 'image' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No image provided'}), 400
+
+    image_file = request.files['image']
+    img_bytes = np.frombuffer(image_file.read(), np.uint8)
+    img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+    if len(faces) == 0:
+        return jsonify({'status': 'error', 'message': 'No face detected'}), 400
+
+    x, y, w, h = faces[0]
+    face_img = img[y:y+h, x:x+w]
+
+    _, buffer = cv2.imencode('.png', face_img)
+    return send_file(BytesIO(buffer.tobytes()), mimetype='image/png')
+
+# ----------------------------
+# ✨ ENHANCEMENT ENDPOINT
+# ----------------------------
 @app.route('/upload', methods=['POST'])
 def upload_image():
     if 'image' not in request.files:
         return jsonify({'status': 'error', 'message': 'No image file in request'}), 400
-    
+
     image_file = request.files['image']
     gender = request.form.get('gender', '').lower()
 
@@ -46,6 +78,9 @@ def upload_image():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+# ----------------------------
+# 🧠 PROCESS WITH AI
+# ----------------------------
 def process_with_deep_image_ai(image_path, timestamp, gender):
     headers = {
         'x-api-key': API_KEY,
@@ -87,12 +122,15 @@ def process_with_deep_image_ai(image_path, timestamp, gender):
             headers=headers
         )
         poll_json = poll_response.json()
-        print(f"Poll {attempt+1}: {poll_json.get('status')}")
+        print(f"Poll {attempt + 1}: {poll_json.get('status')}")
         if poll_json.get('status') == 'complete':
             return download_result_image(poll_json['result_url'], timestamp)
 
     raise Exception("Processing timed out.")
 
+# ----------------------------
+# ⬇️ DOWNLOAD FINAL IMAGE
+# ----------------------------
 def download_result_image(url, timestamp):
     enhanced_filename = f"superhero_avatar_{timestamp}.png"
     enhanced_filepath = os.path.join(ENHANCED_FOLDER, enhanced_filename)
@@ -100,6 +138,9 @@ def download_result_image(url, timestamp):
     print(f"Downloaded enhanced image: {enhanced_filepath}")
     return enhanced_filepath
 
+# ----------------------------
+# 🧠 PROMPT PER GENDER
+# ----------------------------
 def get_gender_prompt(gender):
     if gender == 'woman':
         return (
@@ -113,7 +154,9 @@ def get_gender_prompt(gender):
             "is sheathed on his back. Cinematic lighting, full body shot."
         )
 
-
+# ----------------------------
+# 🔓 Serve and List Images
+# ----------------------------
 @app.route('/enhanced_images/<filename>')
 def serve_enhanced_image(filename):
     return send_from_directory(ENHANCED_FOLDER, filename)
@@ -122,6 +165,9 @@ def serve_enhanced_image(filename):
 def list_enhanced_images():
     return jsonify([f for f in os.listdir(ENHANCED_FOLDER) if f.endswith('.png')])
 
+# ----------------------------
+# 🚀 Run the App
+# ----------------------------
 if __name__ == '__main__':
     print("Flask server running at http://0.0.0.0:5000")
     app.run(host='0.0.0.0', port=5000, debug=True)
