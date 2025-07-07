@@ -16,18 +16,14 @@ public class EnhancedImageLoader : MonoBehaviour
     void Start()
     {
         StartCoroutine(LoadExistingImages());
-        //StartCoroutine(AutoScroll());
     }
 
-    // Method to be called when a new image is available
     public void LoadNewImage(string imageName)
     {
         if (!loadedImages.Contains(imageName))
         {
             Debug.Log($"Loading new image: {imageName}");
             StartCoroutine(DownloadAndAddImage(imageName));
-
-            // Optional: Scroll to the new image
             StartCoroutine(ScrollToNewImage());
         }
     }
@@ -69,8 +65,6 @@ public class EnhancedImageLoader : MonoBehaviour
             GameObject newItem = Instantiate(imageItemPrefab, content);
             newItem.GetComponent<RawImage>().texture = texture;
             loadedImages.Add(imageName);
-
-            // Optional: Adjust content size if needed
             Canvas.ForceUpdateCanvases();
         }
     }
@@ -78,37 +72,6 @@ public class EnhancedImageLoader : MonoBehaviour
     IEnumerator ScrollToNewImage()
     {
         yield return new WaitForEndOfFrame();
-        // Depends on your UI layout - this assumes horizontal scrolling to the end
         scrollRect.horizontalNormalizedPosition = 0f;
-    }
-
-    /*IEnumerator AutoScroll()
-    {
-        yield return new WaitForSeconds(1f); // wait a bit before starting scroll
-        while (true)
-        {
-            yield return null;
-            scrollRect.horizontalNormalizedPosition -= Time.deltaTime * 0.05f;
-            if (scrollRect.horizontalNormalizedPosition <= 0f)
-            {
-                scrollRect.horizontalNormalizedPosition = 1f; // loop back
-            }
-        }
-    }*/
-}
-
-public static class JsonHelper
-{
-    public static T[] GetJsonArray<T>(string json)
-    {
-        string newJson = "{\"array\":" + json + "}";
-        Wrapper<T> wrapper = JsonUtility.FromJson<Wrapper<T>>(newJson);
-        return wrapper.array;
-    }
-
-    [System.Serializable]
-    private class Wrapper<T>
-    {
-        public T[] array;
     }
 }
