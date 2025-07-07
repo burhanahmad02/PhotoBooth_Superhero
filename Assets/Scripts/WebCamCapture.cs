@@ -29,6 +29,13 @@ public class WebcamCapture : MonoBehaviour
         {
             aspectRatioFitter.aspectRatio = (float)webCamTexture.width / webCamTexture.height;
         }
+        manButton.onClick.AddListener(() => SelectGender("man"));
+        womanButton.onClick.AddListener(() => SelectGender("woman"));
+    }
+    void SelectGender(string gender)
+    {
+        selectedGender = gender;
+        Debug.Log($"Gender selected: {gender}");
     }
 
 }
