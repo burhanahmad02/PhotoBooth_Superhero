@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -15,6 +16,8 @@ public class WebcamCapture : MonoBehaviour
 
     private string selectedGender = "";
     public string pythonServerURL = "http://localhost:5000/upload";
+
+    public EnhancedImageLoader imageLoader;
 
     void Start()
     {
@@ -55,7 +58,39 @@ public class WebcamCapture : MonoBehaviour
         yield return new WaitForSeconds(delaySeconds);
         yield return StartCoroutine(CaptureAndSend());
     }
+    void ProcessServerResponse(string jsonResponse)
+    {
+        try
+        {
+            ImageUploadResponse response = JsonUtility.FromJson<ImageUploadResponse>(jsonResponse);
 
+            if (response != null && response.status == "success")
+            {
+                Debug.Log($"Image enhanced successfully: {response.enhanced_filename}");
+                if (imageLoader != null)
+                {
+                    imageLoader.LoadNewImage(response.enhanced_filename);
+                }
+            }
+            else
+            {
+                Debug.LogError("Invalid server response");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to parse server response: {e.Message}");
+        }
+    }
+
+    [System.Serializable]
+    public class ImageUploadResponse
+    {
+        public string status;
+        public string message;
+        public string original_filename;
+        public string enhanced_filename;
+    }
     IEnumerator CaptureAndSend()
     {
         yield return new WaitForEndOfFrame();
@@ -82,6 +117,8 @@ public class WebcamCapture : MonoBehaviour
             {
                 Debug.Log("Image sent successfully!");
                 Debug.Log("Server response: " + www.downloadHandler.text);
+                ProcessServerResponse(www.downloadHandler.text);
+
             }
         }
 
