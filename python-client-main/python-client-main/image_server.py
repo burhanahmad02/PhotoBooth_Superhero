@@ -94,7 +94,7 @@ def process_with_deep_image_ai(image_path, timestamp, gender):
     raise Exception("Processing timed out.")
 
 def download_result_image(url, timestamp):
-    enhanced_filename = f"emirati_avatar_{timestamp}.png"
+    enhanced_filename = f"superhero_avatar_{timestamp}.png"
     enhanced_filepath = os.path.join(ENHANCED_FOLDER, enhanced_filename)
     urlretrieve(url, enhanced_filepath)
     print(f"Downloaded enhanced image: {enhanced_filepath}")
@@ -103,16 +103,16 @@ def download_result_image(url, timestamp):
 def get_gender_prompt(gender):
     if gender == 'woman':
         return (
-            "A woman wearing traditional Emirati abaya and shayla. "
-            "Face remains realistic. Studio lighting. "
-            "Background: UAE heritage with modern Emirati architecture, Burj Khalifa area, palm trees."
+            "A fearless female warrior in ornate armor standing in the desert, sand swirling around her boots. "
+            "Sword in hand, confident stance, dramatic desert backdrop, cinematic lighting, full body shot."
         )
     else:
         return (
-            "A man wearing traditional Emirati attire. "
-            "White kandura and ghutra. Face remains realistic. Studio lighting. "
-            "Background: UAE heritage with modern Emirati architecture, Burj Khalifa area, palm trees."
+            "A heroic warrior wearing bronze and black medieval armor, standing confidently in the middle of a vast desert "
+            "with sand splashing around and beneath his feet. The sky is clear and blue. A sword is in his hand and another "
+            "is sheathed on his back. Cinematic lighting, full body shot."
         )
+
 
 @app.route('/enhanced_images/<filename>')
 def serve_enhanced_image(filename):
