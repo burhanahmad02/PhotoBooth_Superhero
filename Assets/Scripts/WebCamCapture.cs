@@ -7,6 +7,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using DG.Tweening; // DOTween is required
+using TMPro;
 
 public class WebcamCapture : MonoBehaviour
 {
@@ -15,12 +17,18 @@ public class WebcamCapture : MonoBehaviour
     public AspectRatioFitter aspectRatioFitter;
 
     public Button manButton, womanButton, captureButton, proceedButton, retakeButton;
+    public GameObject genderWarningPopup;
+    public TextMeshProUGUI countdownText;
+    public CanvasGroup screenFade;
+    public GameObject loadingPanel;
+    public AudioSource shutterSound;
 
     private string selectedGender = "";
     public string faceCropURL = "http://localhost:5000/crop_face";
     public string enhanceURL = "http://localhost:5000/upload";
 
     private Texture2D capturedFace;
+    private Tween genderLoopTween;
 
     void Start()
     {
@@ -41,9 +49,9 @@ public class WebcamCapture : MonoBehaviour
         captureButton.onClick.AddListener(() =>
         {
             if (!string.IsNullOrEmpty(selectedGender))
-                StartCoroutine(CaptureAndCropFace());
+                StartCoroutine(CountdownAndCapture());
             else
-                Debug.LogWarning("Please select a gender.");
+                ShowGenderWarning();
         });
 
         proceedButton.onClick.AddListener(() => StartCoroutine(SendFaceForEnhancement()));
@@ -52,15 +60,43 @@ public class WebcamCapture : MonoBehaviour
             displayImage.texture = webCamTexture;
             webCamTexture.Play();
             ToggleConfirmationButtons(false);
+            screenFade.DOFade(1f, 0.5f);
         });
 
         ToggleConfirmationButtons(false);
+        genderWarningPopup.SetActive(false);
+        countdownText.gameObject.SetActive(false);
+        loadingPanel.SetActive(false);
+        screenFade.alpha = 1f;
     }
 
     void SelectGender(string gender)
     {
         selectedGender = gender;
         Debug.Log("Selected Gender: " + gender);
+
+        genderLoopTween?.Kill();
+
+        if (gender == "man")
+        {
+            genderLoopTween = manButton.transform.DOScale(1.1f, 0.5f).SetLoops(-1, LoopType.Yoyo);
+            womanButton.transform.DOScale(1f, 0.2f);
+        }
+        else
+        {
+            genderLoopTween = womanButton.transform.DOScale(1.1f, 0.5f).SetLoops(-1, LoopType.Yoyo);
+            manButton.transform.DOScale(1f, 0.2f);
+        }
+    }
+
+    void ShowGenderWarning()
+    {
+        genderWarningPopup.SetActive(true);
+        genderWarningPopup.transform.localScale = Vector3.zero;
+        genderWarningPopup.transform.DOScale(1f, 0.3f).OnComplete(() =>
+        {
+            DOVirtual.DelayedCall(2f, () => genderWarningPopup.SetActive(false));
+        });
     }
 
     void ToggleConfirmationButtons(bool show)
@@ -68,6 +104,33 @@ public class WebcamCapture : MonoBehaviour
         proceedButton.gameObject.SetActive(show);
         retakeButton.gameObject.SetActive(show);
         captureButton.gameObject.SetActive(!show);
+        manButton.gameObject.SetActive(!show);
+        womanButton.gameObject.SetActive(!show);
+    }
+
+    IEnumerator CountdownAndCapture()
+    {
+        countdownText.gameObject.SetActive(true);
+
+        for (int i = 3; i > 0; i--)
+        {
+            countdownText.text = i.ToString();
+            yield return new WaitForSeconds(1);
+        }
+
+        countdownText.gameObject.SetActive(false);
+        shutterSound?.Play();
+
+        yield return screenFade.DOFade(0f, 0.5f).WaitForCompletion();
+
+        manButton.gameObject.SetActive(false);
+        womanButton.gameObject.SetActive(false);
+        captureButton.gameObject.SetActive(false);
+
+        yield return StartCoroutine(CaptureAndCropFace());
+
+        yield return screenFade.DOFade(1f, 0.5f).WaitForCompletion();
+        ToggleConfirmationButtons(true);
     }
 
     IEnumerator CaptureAndCropFace()
@@ -97,14 +160,14 @@ public class WebcamCapture : MonoBehaviour
                 capturedFace.LoadImage(www.downloadHandler.data);
                 displayImage.texture = capturedFace;
                 webCamTexture.Stop();
-
-                ToggleConfirmationButtons(true);
             }
         }
     }
 
     IEnumerator SendFaceForEnhancement()
     {
+        loadingPanel.SetActive(true);
+
         byte[] faceBytes = capturedFace.EncodeToPNG();
 
         WWWForm form = new WWWForm();
@@ -114,6 +177,8 @@ public class WebcamCapture : MonoBehaviour
         using (UnityWebRequest www = UnityWebRequest.Post(enhanceURL, form))
         {
             yield return www.SendWebRequest();
+
+            loadingPanel.SetActive(false);
 
             if (www.result != UnityWebRequest.Result.Success)
             {
@@ -127,6 +192,10 @@ public class WebcamCapture : MonoBehaviour
                 {
                     string imageUrl = "http://localhost:5000/enhanced_images/" + response.enhanced_filename;
                     StartCoroutine(LoadEnhancedImage(imageUrl));
+                }
+                else
+                {
+                    Debug.LogError("Enhancement failed: " + response.message);
                 }
             }
         }
