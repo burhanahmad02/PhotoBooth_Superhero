@@ -15,6 +15,20 @@ public class WebcamCapture : MonoBehaviour
 
     void Start()
     {
-        Debug.Log("WebcamCapture script initialized");
+        if (displayImage == null)
+        {
+            Debug.LogError("Assign RawImage to displayImage!");
+            return;
+        }
+
+        webCamTexture = new WebCamTexture(WebCamTexture.devices[0].name, 1280, 720, 30);
+        webCamTexture.Play();
+        displayImage.texture = webCamTexture;
+
+        if (aspectRatioFitter != null)
+        {
+            aspectRatioFitter.aspectRatio = (float)webCamTexture.width / webCamTexture.height;
+        }
     }
+
 }
