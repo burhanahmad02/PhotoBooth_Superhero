@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 
 public class WebcamCapture : MonoBehaviour
@@ -13,6 +14,7 @@ public class WebcamCapture : MonoBehaviour
     public Button captureButton;
 
     private string selectedGender = "";
+    public string pythonServerURL = "http://localhost:5000/upload";
 
     void Start()
     {
@@ -64,9 +66,28 @@ public class WebcamCapture : MonoBehaviour
 
         byte[] bytes = texture.EncodeToPNG();
 
-        // Log to confirm
-        Debug.Log($"Captured image size: {bytes.Length} bytes");
+        WWWForm form = new WWWForm();
+        form.AddBinaryData("image", bytes, "webcam.png", "image/png");
+        form.AddField("gender", selectedGender);
+
+        using (UnityWebRequest www = UnityWebRequest.Post(pythonServerURL, form))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError("Error sending image: " + www.error);
+            }
+            else
+            {
+                Debug.Log("Image sent successfully!");
+                Debug.Log("Server response: " + www.downloadHandler.text);
+            }
+        }
+
+        selectedGender = "";
     }
+
 
 
 }
