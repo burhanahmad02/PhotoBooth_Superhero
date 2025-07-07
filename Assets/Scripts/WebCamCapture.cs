@@ -20,7 +20,7 @@ public class WebcamCapture : MonoBehaviour
     public GameObject loadingPanel;
     public AudioSource shutterSound;
 
-    public RawImage qrImage; // New QR Image display
+    public RawImage qrImage;
 
     private string selectedGender = "";
     public string faceCropURL = "http://localhost:5000/crop_face";

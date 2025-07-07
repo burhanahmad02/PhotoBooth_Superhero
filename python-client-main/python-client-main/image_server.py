@@ -22,7 +22,7 @@ os.makedirs(ENHANCED_FOLDER, exist_ok=True)
 os.makedirs(QR_FOLDER, exist_ok=True)
 
 # ----------------------------
-# 📸 CROP FACE ENDPOINT
+#  CROP FACE ENDPOINT
 # ----------------------------
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
@@ -48,7 +48,7 @@ def crop_face():
     return send_file(BytesIO(buffer.tobytes()), mimetype='image/png')
 
 # ----------------------------
-# ✨ ENHANCEMENT ENDPOINT
+#  ENHANCEMENT ENDPOINT
 # ----------------------------
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -84,7 +84,7 @@ def upload_image():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # ----------------------------
-# 🧠 PROCESS WITH AI
+# PROCESS WITH AI
 # ----------------------------
 def process_with_deep_image_ai(image_path, timestamp, gender):
     headers = {'x-api-key': API_KEY}
@@ -131,7 +131,7 @@ def process_with_deep_image_ai(image_path, timestamp, gender):
     raise Exception("Processing timed out.")
 
 # ----------------------------
-# ⬇️ DOWNLOAD FINAL IMAGE
+#  DOWNLOAD FINAL IMAGE
 # ----------------------------
 def download_result_image(url, timestamp):
     enhanced_filename = f"superhero_avatar_{timestamp}.png"
@@ -141,7 +141,7 @@ def download_result_image(url, timestamp):
     return enhanced_filepath
 
 # ----------------------------
-# 🔳 GENERATE QR CODE
+#  GENERATE QR CODE
 # ----------------------------
 def generate_qr_code_for_image(image_path):
     filename = os.path.basename(image_path)
@@ -155,7 +155,7 @@ def generate_qr_code_for_image(image_path):
     return qr_path
 
 # ----------------------------
-# 🧠 PROMPT PER GENDER
+#  PROMPT PER GENDER
 # ----------------------------
 def get_gender_prompt(gender):
     if gender == 'woman':
@@ -171,7 +171,7 @@ def get_gender_prompt(gender):
         )
 
 # ----------------------------
-# 🔓 Serve and List Images
+# Serve and List Images
 # ----------------------------
 @app.route('/enhanced_images/<filename>')
 def serve_enhanced_image(filename):
@@ -185,9 +185,7 @@ def list_enhanced_images():
 def serve_qr_code(filename):
     return send_from_directory(QR_FOLDER, filename)
 
-# ----------------------------
-# 🚀 Run the App
-# ----------------------------
+
 if __name__ == '__main__':
     print("Flask server running at http://0.0.0.0:5000")
     app.run(host='0.0.0.0', port=5000, debug=True)
