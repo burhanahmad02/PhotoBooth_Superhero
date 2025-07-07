@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emirati Avatar Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #e0e0e0, #fdfdfd);
+            padding: 40px;
+            text-align: center;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: inline-block;
+        }
+        input[type="file"] {
+            margin: 10px;
+        }
+        .buttons {
+            margin: 15px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .man { background-color: #2e86de; color: white; }
+        .woman { background-color: #e84393; color: white; }
+        #result {
+            margin-top: 20px;
+        }
+        #preview {
+            max-width: 300px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Emirati Avatar Generator</h2>
+        <p>Select your image and choose gender</p>
+        <input type="file" id="imageInput" accept="image/*">
+        <div class="buttons">
+            <button class="man" onclick="upload('man')">Man</button>
+            <button class="woman" onclick="upload('woman')">Woman</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function upload(gender) {
+            const imageInput = document.getElementById('imageInput');
+            const resultDiv = document.getElementById('result');
+
+            if (imageInput.files.length === 0) {
+                alert("Please select an image first.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("image", imageInput.files[0]);
+            formData.append("gender", gender);
+
+            resultDiv.innerHTML = "Processing image... Please wait.";
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    resultDiv.innerHTML = `
+                        <h4>Enhanced Image</h4>
+                        <img id="preview" src="/enhanced_images/${data.enhanced_filename}" alt="Enhanced Avatar">
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p style="color:red;">${data.message}</p>`;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                resultDiv.innerHTML = `<p style="color:red;">Error uploading image.</p>`;
+            });
+        }
+    </script>
+</body>
+</html>
