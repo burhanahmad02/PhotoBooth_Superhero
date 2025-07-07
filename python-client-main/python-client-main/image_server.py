@@ -8,15 +8,18 @@ from urllib.request import urlretrieve
 import cv2
 import numpy as np
 from io import BytesIO
+import qrcode
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'received_images'
 ENHANCED_FOLDER = 'enhanced_images'
-API_KEY = "14a2da80-1541-11f0-80e8-69e4165f51fa"  # Replace with your actual API key
+QR_FOLDER = 'qr_codes'
+API_KEY = "14a2da80-1541-11f0-80e8-69e4165f51fa"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(ENHANCED_FOLDER, exist_ok=True)
+os.makedirs(QR_FOLDER, exist_ok=True)
 
 # ----------------------------
 # 📸 CROP FACE ENDPOINT
@@ -67,12 +70,14 @@ def upload_image():
 
     try:
         enhanced_filepath = process_with_deep_image_ai(filepath, timestamp, gender)
+        qr_path = generate_qr_code_for_image(enhanced_filepath)
 
         return jsonify({
             'status': 'success',
             'message': 'Image processed',
             'original_filename': filename,
-            'enhanced_filename': os.path.basename(enhanced_filepath)
+            'enhanced_filename': os.path.basename(enhanced_filepath),
+            'qr_code_filename': os.path.basename(qr_path)
         })
 
     except Exception as e:
@@ -82,10 +87,7 @@ def upload_image():
 # 🧠 PROCESS WITH AI
 # ----------------------------
 def process_with_deep_image_ai(image_path, timestamp, gender):
-    headers = {
-        'x-api-key': API_KEY,
-    }
-
+    headers = {'x-api-key': API_KEY}
     prompt = get_gender_prompt(gender)
 
     with open(image_path, 'rb') as f:
@@ -139,6 +141,20 @@ def download_result_image(url, timestamp):
     return enhanced_filepath
 
 # ----------------------------
+# 🔳 GENERATE QR CODE
+# ----------------------------
+def generate_qr_code_for_image(image_path):
+    filename = os.path.basename(image_path)
+    image_url = f"http://localhost:5000/enhanced_images/{filename}"
+    qr = qrcode.make(image_url)
+
+    qr_filename = f"qr_{filename.replace('.png', '.png')}"
+    qr_path = os.path.join(QR_FOLDER, qr_filename)
+    qr.save(qr_path)
+    print(f"QR code saved at: {qr_path}")
+    return qr_path
+
+# ----------------------------
 # 🧠 PROMPT PER GENDER
 # ----------------------------
 def get_gender_prompt(gender):
@@ -164,6 +180,10 @@ def serve_enhanced_image(filename):
 @app.route('/enhanced_images/list')
 def list_enhanced_images():
     return jsonify([f for f in os.listdir(ENHANCED_FOLDER) if f.endswith('.png')])
+
+@app.route('/qr_codes/<filename>')
+def serve_qr_code(filename):
+    return send_from_directory(QR_FOLDER, filename)
 
 # ----------------------------
 # 🚀 Run the App

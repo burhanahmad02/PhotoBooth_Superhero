@@ -1,13 +1,10 @@
-// ============================
-// Unity Script: WebcamCapture.cs
-// ============================
-
+// ======
 using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
-using DG.Tweening; // DOTween is required
+using DG.Tweening;
 using TMPro;
 
 public class WebcamCapture : MonoBehaviour
@@ -16,16 +13,19 @@ public class WebcamCapture : MonoBehaviour
     public RawImage displayImage;
     public AspectRatioFitter aspectRatioFitter;
 
-    public Button manButton, womanButton, captureButton, proceedButton, retakeButton;
+    public Button manButton, womanButton, captureButton, proceedButton, retakeButton, homeButton;
     public GameObject genderWarningPopup;
     public TextMeshProUGUI countdownText;
     public CanvasGroup screenFade;
     public GameObject loadingPanel;
     public AudioSource shutterSound;
 
+    public RawImage qrImage; // New QR Image display
+
     private string selectedGender = "";
     public string faceCropURL = "http://localhost:5000/crop_face";
     public string enhanceURL = "http://localhost:5000/upload";
+    public string qrBaseURL = "http://localhost:5000/qr_codes/";
 
     private Texture2D capturedFace;
     private Tween genderLoopTween;
@@ -60,10 +60,21 @@ public class WebcamCapture : MonoBehaviour
             displayImage.texture = webCamTexture;
             webCamTexture.Play();
             ToggleConfirmationButtons(false);
+            ToggleQRDisplay(false);
             screenFade.DOFade(1f, 0.5f);
         });
 
+        homeButton.onClick.AddListener(() =>
+        {
+            ToggleQRDisplay(false);
+            ToggleConfirmationButtons(false);
+            screenFade.DOFade(1f, 0.5f);
+            webCamTexture.Play();
+            displayImage.texture = webCamTexture;
+        });
+
         ToggleConfirmationButtons(false);
+        ToggleQRDisplay(false);
         genderWarningPopup.SetActive(false);
         countdownText.gameObject.SetActive(false);
         loadingPanel.SetActive(false);
@@ -103,6 +114,15 @@ public class WebcamCapture : MonoBehaviour
     {
         proceedButton.gameObject.SetActive(show);
         retakeButton.gameObject.SetActive(show);
+        captureButton.gameObject.SetActive(!show);
+        manButton.gameObject.SetActive(!show);
+        womanButton.gameObject.SetActive(!show);
+    }
+
+    void ToggleQRDisplay(bool show)
+    {
+        qrImage.gameObject.SetActive(show);
+        homeButton.gameObject.SetActive(show);
         captureButton.gameObject.SetActive(!show);
         manButton.gameObject.SetActive(!show);
         womanButton.gameObject.SetActive(!show);
@@ -191,7 +211,10 @@ public class WebcamCapture : MonoBehaviour
                 if (response.status == "success")
                 {
                     string imageUrl = "http://localhost:5000/enhanced_images/" + response.enhanced_filename;
+                    string qrUrl = qrBaseURL + response.qr_code_filename;
+
                     StartCoroutine(LoadEnhancedImage(imageUrl));
+                    StartCoroutine(LoadQRImage(qrUrl));
                 }
                 else
                 {
@@ -220,6 +243,23 @@ public class WebcamCapture : MonoBehaviour
         }
     }
 
+    IEnumerator LoadQRImage(string url)
+    {
+        UnityWebRequest www = UnityWebRequestTexture.GetTexture(url);
+        yield return www.SendWebRequest();
+
+        if (www.result == UnityWebRequest.Result.Success)
+        {
+            Texture2D qrTexture = DownloadHandlerTexture.GetContent(www);
+            qrImage.texture = qrTexture;
+            ToggleQRDisplay(true);
+        }
+        else
+        {
+            Debug.LogError("Failed to load QR code image.");
+        }
+    }
+
     [Serializable]
     public class ImageUploadResponse
     {
@@ -227,5 +267,6 @@ public class WebcamCapture : MonoBehaviour
         public string message;
         public string original_filename;
         public string enhanced_filename;
+        public string qr_code_filename;
     }
 }
