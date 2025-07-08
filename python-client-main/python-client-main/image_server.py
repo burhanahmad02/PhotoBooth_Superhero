@@ -9,13 +9,14 @@ import cv2
 import numpy as np
 from io import BytesIO
 import qrcode
+import socket
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'received_images'
 ENHANCED_FOLDER = 'enhanced_images'
 QR_FOLDER = 'qr_codes'
-API_KEY = "14a2da80-1541-11f0-80e8-69e4165f51fa"
+API_KEY = "3cb74da0-5bcb-11f0-a84d-45e2349af7bf"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(ENHANCED_FOLDER, exist_ok=True)
@@ -143,16 +144,35 @@ def download_result_image(url, timestamp):
 # ----------------------------
 #  GENERATE QR CODE
 # ----------------------------
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't have to be reachable
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+    return ip
 def generate_qr_code_for_image(image_path):
     filename = os.path.basename(image_path)
-    image_url = f"http://localhost:5000/enhanced_images/{filename}"
+    print("Generating QR code for:", filename)
+
+    local_ip = get_local_ip()
+    print("Local IP:", local_ip)
+
+    image_url = f"http://{local_ip}:5000/enhanced_images/{filename}"
+    print("Image URL for QR:", image_url)
+
     qr = qrcode.make(image_url)
 
     qr_filename = f"qr_{filename.replace('.png', '.png')}"
     qr_path = os.path.join(QR_FOLDER, qr_filename)
+    print("Saving QR code to:", qr_path)
+
     qr.save(qr_path)
     print(f"QR code saved at: {qr_path}")
     return qr_path
+
 
 # ----------------------------
 #  PROMPT PER GENDER

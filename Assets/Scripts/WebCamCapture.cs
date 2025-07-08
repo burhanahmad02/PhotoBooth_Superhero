@@ -6,6 +6,7 @@ using UnityEngine.Networking;
 using UnityEngine.UI;
 using DG.Tweening;
 using TMPro;
+using System.Collections.Generic;
 
 public class WebcamCapture : MonoBehaviour
 {
@@ -14,6 +15,15 @@ public class WebcamCapture : MonoBehaviour
     public AspectRatioFitter aspectRatioFitter;
 
     public Button manButton, womanButton, captureButton, proceedButton, retakeButton, homeButton;
+    public Button sample1Button, sample2Button, sample3Button, sample4Button;
+    private string[] sampleFileNames = { "Sample 1.png", "Sample 2.png", "Sample 3.png", "Sample 4.png" };
+    private Dictionary<string, string> genderMap = new Dictionary<string, string>
+{
+    { "Sample 1.png", "woman" },
+    { "Sample 2.png", "woman" },
+    { "Sample 3.png", "man" },
+    { "Sample 4.png", "man" }
+};
     public GameObject genderWarningPopup;
     public TextMeshProUGUI countdownText;
     public CanvasGroup screenFade;
@@ -43,8 +53,13 @@ public class WebcamCapture : MonoBehaviour
             aspectRatioFitter.aspectRatio = (float)webCamTexture.width / webCamTexture.height;
         }
 
+
         manButton.onClick.AddListener(() => SelectGender("man"));
         womanButton.onClick.AddListener(() => SelectGender("woman"));
+        sample1Button.onClick.AddListener(() => StartCoroutine(LoadAndEnhanceFromStreamingAssets("Sample 1.png")));
+        sample2Button.onClick.AddListener(() => StartCoroutine(LoadAndEnhanceFromStreamingAssets("Sample 2.png")));
+        sample3Button.onClick.AddListener(() => StartCoroutine(LoadAndEnhanceFromStreamingAssets("Sample 3.jpg")));
+        sample4Button.onClick.AddListener(() => StartCoroutine(LoadAndEnhanceFromStreamingAssets("Sample 4.png")));
 
         captureButton.onClick.AddListener(() =>
         {
@@ -80,6 +95,45 @@ public class WebcamCapture : MonoBehaviour
         loadingPanel.SetActive(false);
         screenFade.alpha = 1f;
     }
+    IEnumerator LoadAndEnhanceFromStreamingAssets(string fileName)
+    {
+        // Fade screen to black (same as in Capture flow)
+        yield return screenFade.DOFade(0f, 0.5f).WaitForCompletion();
+
+        // Hide initial buttons
+        captureButton.gameObject.SetActive(false);
+        manButton.gameObject.SetActive(false);
+        womanButton.gameObject.SetActive(false);
+
+        // Load image from StreamingAssets
+        string filePath = System.IO.Path.Combine(Application.streamingAssetsPath + "/Input Sample Faces", fileName);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+    UnityWebRequest request = UnityWebRequest.Get(filePath);
+    yield return request.SendWebRequest();
+    byte[] imageData = request.downloadHandler.data;
+#else
+        byte[] imageData = System.IO.File.ReadAllBytes(filePath);
+#endif
+
+        Texture2D loadedTexture = new Texture2D(2, 2);
+        loadedTexture.LoadImage(imageData);
+        displayImage.texture = loadedTexture;
+        capturedFace = loadedTexture;
+
+        // Get gender from map
+        if (genderMap.ContainsKey(fileName))
+            selectedGender = genderMap[fileName];
+        else
+            selectedGender = "man";
+
+        // Fade screen back in
+        yield return screenFade.DOFade(1f, 0.5f).WaitForCompletion();
+
+        // Show Proceed/Retake
+        ToggleConfirmationButtons(true);
+    }
+
 
     void SelectGender(string gender)
     {
@@ -127,6 +181,7 @@ public class WebcamCapture : MonoBehaviour
         manButton.gameObject.SetActive(!show);
         womanButton.gameObject.SetActive(!show);
     }
+    
 
     IEnumerator CountdownAndCapture()
     {
